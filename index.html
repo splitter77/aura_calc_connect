@@ -1,0 +1,144 @@
+<!doctype html>
+<!--
+  Calculatrice connectée — AuraKit.
+  Même page dans l'App Clip (spectateur, invité) et dans Aura Browser (artiste, hôte) : les deux
+  calculatrices restent identiques en direct via Bluetooth.
+  Test sur ordinateur : deux onglets, ?mock=join (App Clip) et ?mock=host (Aura Browser).
+-->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="format-detection" content="telephone=no">
+  <title data-en="Calculator">Calculatrice</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="lib/aurakit-i18n.js" data-default="fr" data-languages="fr,en"></script>
+  <script src="lib/aurakit-mock.js"></script>
+  <script src="lib/aurakit.js"></script>
+  <script src="calc-engine.js"></script>
+</head>
+<body>
+  <main class="calc">
+    <header class="top">
+      <button class="round-btn" id="historyBtn" aria-label="Historique" data-en-aria="History">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9.2"/><path d="M12 6.8V12H7.6"/>
+        </svg>
+      </button>
+      <button class="round-btn" id="modeBtn" aria-label="Calculatrice" data-en-aria="Calculator">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+          <rect x="5" y="2.5" width="14" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <rect x="8" y="5.5" width="8" height="3" rx="0.8"/>
+          <circle cx="9" cy="11.6" r="1.05"/><circle cx="12" cy="11.6" r="1.05"/><circle cx="15" cy="11.6" r="1.05"/>
+          <circle cx="9" cy="14.6" r="1.05"/><circle cx="12" cy="14.6" r="1.05"/><circle cx="15" cy="14.6" r="1.05"/>
+          <circle cx="9" cy="17.6" r="1.05"/><circle cx="12" cy="17.6" r="1.05"/><circle cx="15" cy="17.6" r="1.05"/>
+        </svg>
+      </button>
+    </header>
+
+    <section class="display" aria-live="polite">
+      <div class="sub" id="sub"></div>
+      <div class="main" id="main">0</div>
+    </section>
+
+    <section class="keys" id="keys">
+      <button class="key fn" data-key="back" aria-label="Effacer" data-en-aria="Delete">
+        <svg viewBox="0 0 32 24" width="44" height="33" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M10 2.5h17.5a2.5 2.5 0 0 1 2.5 2.5v14a2.5 2.5 0 0 1-2.5 2.5H10L2 12z"/><path d="M14.5 8l7 8M21.5 8l-7 8"/>
+        </svg>
+      </button>
+      <button class="key fn" data-key="clear">AC</button>
+      <button class="key fn" data-key="%">%</button>
+      <button class="key op" data-key="/">÷</button>
+
+      <button class="key" data-key="7">7</button>
+      <button class="key" data-key="8">8</button>
+      <button class="key" data-key="9">9</button>
+      <button class="key op" data-key="*">×</button>
+
+      <button class="key" data-key="4">4</button>
+      <button class="key" data-key="5">5</button>
+      <button class="key" data-key="6">6</button>
+      <button class="key op" data-key="-">−</button>
+
+      <button class="key" data-key="1">1</button>
+      <button class="key" data-key="2">2</button>
+      <button class="key" data-key="3">3</button>
+      <button class="key op" data-key="+">+</button>
+
+      <button class="key" data-key="neg" aria-label="Plus ou moins" data-en-aria="Plus or minus">
+        <svg viewBox="0 0 40 40" width="46" height="46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <path d="M8 11h10M13 6v10M29 6L11 34M22 30h11"/>
+        </svg>
+      </button>
+      <button class="key" data-key="0">0</button>
+      <button class="key" data-key=".">,</button>
+      <button class="key op" data-key="=">=</button>
+    </section>
+  </main>
+
+  <!-- Historique (les deux iPhones) -->
+  <div class="sheet" id="historySheet" hidden>
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <button class="link-btn" id="historyClear" data-en="Clear">Effacer</button>
+        <b data-en="History">Historique</b>
+        <button class="link-btn strong" id="historyClose">OK</button>
+      </div>
+      <ul class="history" id="historyList"></ul>
+      <p class="empty" id="historyEmpty" data-en="No History">Aucun historique</p>
+    </div>
+  </div>
+
+  <!-- Panneau de l'artiste (Aura Browser uniquement, ouvert par le bouton calculatrice en haut à droite) -->
+  <div class="sheet" id="panel" hidden>
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <span></span>
+        <b data-en="Connection">Connexion</b>
+        <button class="link-btn strong" id="panelClose">OK</button>
+      </div>
+
+      <div class="group">
+        <div class="row"><span class="dot" id="dot"></span><span id="statusText">—</span></div>
+        <div class="row muted" id="envText"></div>
+      </div>
+
+      <h3 data-en="Force the result">Forcer le résultat</h3>
+      <div class="group">
+        <p class="muted small" data-en="On the next “=” pressed on either iPhone, this number is shown instead of the real result.">Au prochain « = » tapé sur l'un des deux iPhones, ce nombre s'affiche à la place du vrai résultat.</p>
+        <form class="row" id="forceForm">
+          <input id="forceInput" inputmode="decimal" placeholder="ex. 1 234,5" data-en-placeholder="e.g. 1,234.5" autocomplete="off">
+          <button class="pill-btn" id="forceBtn">Armer</button>
+        </form>
+        <div class="row muted small" id="forceState">Non armé</div>
+      </div>
+
+      <div class="group" style="margin-top:22px">
+        <button class="row danger" id="resetBoth" data-en="Reset both calculators">Remettre les deux calculatrices à zéro</button>
+      </div>
+
+      <h3 data-en="Spectator keys">Touches du spectateur</h3>
+      <div class="group"><pre class="log" id="keyLog"></pre></div>
+
+      <h3 data-en="Language">Langue</h3>
+      <div class="group seg">
+        <button data-set-lang="fr">Français</button>
+        <button data-set-lang="en">English</button>
+      </div>
+
+      <h3 data-en="Bluetooth link">Liaison Bluetooth</h3>
+      <div class="group">
+        <p class="muted small" data-en="No pairing: the App Clip opened from your Aura tag connects to your Aura Browser over Bluetooth LE by itself, and reconnects if the link drops.">Aucun jumelage : l'App Clip ouvert depuis votre tag Aura se connecte tout seul en Bluetooth LE à votre Aura Browser, et se reconnecte s'il perd la liaison.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
